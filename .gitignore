@@ -23,6 +23,10 @@ mem.log.*
 massif.*
 callgrind.*
 perf.data*
+PKGBUILD
+*.pkg.tar.xz
+pkg/
+
 
 # from kdiff3
 *.BACKUP.*
