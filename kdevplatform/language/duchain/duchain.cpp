@@ -103,6 +103,8 @@ public:
     {
     }
 
+    EnvironmentInformationItem& operator=(const EnvironmentInformationItem& rhs) = delete;
+
     unsigned int hash() const
     {
         return m_topContext;
@@ -208,6 +210,8 @@ public:
     {
         freeAppendedLists();
     }
+
+    EnvironmentInformationListItem& operator=(const EnvironmentInformationListItem& rhs) = delete;
 
     unsigned int hash() const
     {

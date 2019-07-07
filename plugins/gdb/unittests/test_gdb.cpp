@@ -136,6 +136,8 @@ private:
 
 class TestFrameStackModel : public GdbFrameStackModel
 {
+    Q_OBJECT
+
 public:
 
     explicit TestFrameStackModel(DebugSession* session)
@@ -2034,7 +2036,8 @@ void GdbTest::testDebugInExternalTerminal()
 {
     TestLaunchConfiguration cfg;
 
-    foreach (const QString & console, QStringList() << "konsole" << "xterm" << "xfce4-terminal" << "gnome-terminal") {
+    const QStringList consoles { "konsole", "xterm", "xfce4-terminal", "gnome-terminal" };
+    for (const QString& console : consoles) {
 
         TestDebugSession* session = nullptr;
         if (QStandardPaths::findExecutable(console).isEmpty()) {

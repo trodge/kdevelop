@@ -57,7 +57,11 @@ QIcon generateIcon(const WorkingSetIconParameters& params)
         {9, 9, 5, 5},
     };
     if ( params.swapDiagonal ) {
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 13, 0))
+        rects.swapItemsAt(1, 2);
+#else
         rects.swap(1, 2);
+#endif
     }
 
     QPainter painter(&pixmap);
@@ -190,11 +194,14 @@ struct DisableMainWindowUpdatesFromArea
         }
     }
 
+private:
+    Q_DISABLE_COPY(DisableMainWindowUpdatesFromArea)
+
     Sublime::Area* m_area;
     QSet<Sublime::MainWindow*> wasUpdatesEnabled;
 };
 
-void loadFileList(QStringList& ret, KConfigGroup group)
+void loadFileList(QStringList& ret, const KConfigGroup& group)
 {
     if (group.hasKey("Orientation")) {
         QStringList subgroups = group.groupList();

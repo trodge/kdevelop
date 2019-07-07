@@ -51,6 +51,7 @@ class IProject;
 class TextDocument;
 class ISourceFormatter;
 class IPlugin;
+class SourceFormatterControllerPrivate;
 
 struct SourceFormatter
 {
@@ -70,10 +71,13 @@ struct SourceFormatter
         }
         return supported;
     }
+    SourceFormatter() = default;
     ~SourceFormatter()
     {
         qDeleteAll(styles);
     };
+private:
+    Q_DISABLE_COPY(SourceFormatter)
 };
 
 /** \short A singleton class managing all source formatter plugins
@@ -170,7 +174,8 @@ private:
     void resetUi();
 
 private:
-    const QScopedPointer<class SourceFormatterControllerPrivate> d;
+    const QScopedPointer<class SourceFormatterControllerPrivate> d_ptr;
+    Q_DECLARE_PRIVATE(SourceFormatterController)
 };
 
 }

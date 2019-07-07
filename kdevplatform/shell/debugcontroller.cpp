@@ -30,6 +30,7 @@
 #include <KLocalizedString>
 #include <KTextEditor/Document>
 #include <KTextEditor/MarkInterface>
+#include <ktexteditor_version.h>
 #include <KXMLGUIFactory>
 
 #include "../interfaces/idocument.h"
@@ -174,7 +175,7 @@ VariableCollection* DebugController::variableCollection()
 void DebugController::partAdded(KParts::Part* part)
 {
     if (auto* doc = qobject_cast<KTextEditor::Document*>(part)) {
-        auto *iface = dynamic_cast<KTextEditor::MarkInterface*>(doc);
+        auto* iface = qobject_cast<KTextEditor::MarkInterface*>(doc);
         if( !iface )
             return;
 
@@ -322,16 +323,15 @@ void DebugController::clearExecutionPoint()
     qCDebug(SHELL);
     const auto documents = KDevelop::ICore::self()->documentController()->openDocuments();
     for (KDevelop::IDocument* document : documents) {
-        auto *iface = dynamic_cast<KTextEditor::MarkInterface*>(document->textDocument());
+        auto* iface = qobject_cast<KTextEditor::MarkInterface*>(document->textDocument());
         if (!iface)
             continue;
 
-        QHashIterator<int, KTextEditor::Mark*> it = iface->marks();
-        while (it.hasNext())
-        {
-            KTextEditor::Mark* mark = it.next().value();
-            if( mark->type & KTextEditor::MarkInterface::Execution )
+        const auto oldMarks = iface->marks();
+        for (KTextEditor::Mark* mark : oldMarks) {
+            if (mark->type & KTextEditor::MarkInterface::Execution) {
                 iface->removeMark( mark->line, KTextEditor::MarkInterface::Execution );
+            }
         }
     }
 }
@@ -352,7 +352,7 @@ void DebugController::showStepInSource(const QUrl &url, int lineNum)
     if( !document )
         return;
 
-    auto *iface = dynamic_cast<KTextEditor::MarkInterface*>(document->textDocument());
+    auto* iface = qobject_cast<KTextEditor::MarkInterface*>(document->textDocument());
     if( !iface )
         return;
 
@@ -570,8 +570,13 @@ void DebugController::showCurrentLine()
 
 const QPixmap* DebugController::executionPointPixmap()
 {
-  static QPixmap pixmap=QIcon::fromTheme(QStringLiteral("go-next")).pixmap(QSize(22,22), QIcon::Normal, QIcon::Off);
-  return &pixmap;
+#if KTEXTEDITOR_VERSION >= QT_VERSION_CHECK(5,50,0)
+    constexpr int markPixmapSize = 32;
+#else
+    constexpr int markPixmapSize = 22;
+#endif
+    static QPixmap pixmap=QIcon::fromTheme(QStringLiteral("go-next")).pixmap(QSize(markPixmapSize, markPixmapSize), QIcon::Normal, QIcon::Off);
+    return &pixmap;
 }
 
 }

@@ -108,7 +108,7 @@ public:
 
     void removeDocument(Sublime::Document *doc)
     {
-        const QList<QUrl> urlsForDoc = documents.keys(dynamic_cast<KDevelop::IDocument*>(doc));
+        const QList<QUrl> urlsForDoc = documents.keys(qobject_cast<KDevelop::IDocument*>(doc));
         for (const QUrl& url : urlsForDoc) {
             qCDebug(SHELL) << "destroying document" << doc;
             documents.remove(url);
@@ -553,13 +553,14 @@ Q_DECLARE_TYPEINFO(KDevelop::DocumentControllerPrivate::HistoryEntry, Q_MOVABLE_
 
 DocumentController::DocumentController( QObject *parent )
         : IDocumentController( parent )
-        , d(new DocumentControllerPrivate(this))
+        , d_ptr(new DocumentControllerPrivate(this))
 {
     setObjectName(QStringLiteral("DocumentController"));
     QDBusConnection::sessionBus().registerObject( QStringLiteral("/org/kdevelop/DocumentController"),
         this, QDBusConnection::ExportScriptableSlots );
 
-    connect(this, &DocumentController::documentUrlChanged, this, [&] (IDocument* document) { d->changeDocumentUrl(document); });
+    connect(this, &DocumentController::documentUrlChanged,
+            this, [this] (IDocument* document) { Q_D(DocumentController); d->changeDocumentUrl(document); });
 
     if(!(Core::self()->setupFlags() & Core::NoUi)) setupActions();
 }
@@ -570,6 +571,8 @@ void DocumentController::initialize()
 
 void DocumentController::cleanup()
 {
+    Q_D(DocumentController);
+
     if (d->fileOpenRecent)
         d->fileOpenRecent->saveEntries( KConfigGroup(KSharedConfig::openConfig(), "Recent Files" ) );
 
@@ -585,6 +588,8 @@ DocumentController::~DocumentController() = default;
 
 void DocumentController::setupActions()
 {
+    Q_D(DocumentController);
+
     KActionCollection* ac = Core::self()->uiControllerInternal()->defaultMainWindow()->actionCollection();
 
     QAction* action;
@@ -593,7 +598,8 @@ void DocumentController::setupActions()
     action->setIcon(QIcon::fromTheme(QStringLiteral("document-open")));
     ac->setDefaultShortcut(action, Qt::CTRL + Qt::Key_O );
     action->setText(i18n( "&Open..." ) );
-    connect( action, &QAction::triggered, this, [&] { d->chooseDocument(); } );
+    connect(action, &QAction::triggered,
+            this, [this] { Q_D(DocumentController); d->chooseDocument(); } );
     action->setToolTip( i18n( "Open file" ) );
     action->setWhatsThis( i18n( "Opens a file for editing." ) );
 
@@ -677,6 +683,8 @@ bool DocumentController::openDocumentSimple( QString url, int line, int column )
 
 IDocument* DocumentController::openDocument( const QUrl& inputUrl, const QString& prefName )
 {
+    Q_D(DocumentController);
+
     return d->openDocumentInternal( inputUrl, prefName );
 }
 
@@ -685,6 +693,8 @@ IDocument* DocumentController::openDocument( const QUrl & inputUrl,
         DocumentActivationParams activationParams,
         const QString& encoding, IDocument* buddy)
 {
+    Q_D(DocumentController);
+
     return d->openDocumentInternal(inputUrl, QString(), range, encoding, activationParams, buddy);
 }
 
@@ -694,6 +704,8 @@ bool DocumentController::openDocument(IDocument* doc,
                                       DocumentActivationParams activationParams,
                                       IDocument* buddy)
 {
+    Q_D(DocumentController);
+
     return d->openDocumentInternal( doc, range, activationParams, buddy);
 }
 
@@ -712,6 +724,8 @@ void DocumentController::fileClose()
 
 bool DocumentController::closeDocument( const QUrl &url )
 {
+    Q_D(DocumentController);
+
     const auto documentIt = d->documents.constFind(url);
     if (documentIt == d->documents.constEnd())
         return false;
@@ -725,7 +739,9 @@ bool DocumentController::closeDocument( const QUrl &url )
 
 void DocumentController::notifyDocumentClosed(Sublime::Document* doc_)
 {
-    auto* doc = dynamic_cast<IDocument*>(doc_);
+    Q_D(DocumentController);
+
+    auto* doc = qobject_cast<IDocument*>(doc_);
     Q_ASSERT(doc);
 
     d->removeDocument(doc_);
@@ -748,6 +764,8 @@ void DocumentController::notifyDocumentClosed(Sublime::Document* doc_)
 
 IDocument * DocumentController::documentForUrl( const QUrl & dirtyUrl ) const
 {
+    Q_D(const DocumentController);
+
     if (dirtyUrl.isEmpty()) {
         return nullptr;
     }
@@ -759,6 +777,8 @@ IDocument * DocumentController::documentForUrl( const QUrl & dirtyUrl ) const
 
 QList<IDocument*> DocumentController::openDocuments() const
 {
+    Q_D(const DocumentController);
+
     QList<IDocument*> opened;
     for (IDocument* doc : qAsConst(d->documents)) {
         auto *sdoc = dynamic_cast<Sublime::Document*>(doc);
@@ -929,7 +949,7 @@ void DocumentController::closeAllOtherDocuments()
 
         // Deal with saving unsaved solo views
         QList<IDocument*> soloViews = documentsExclusivelyInWindow(qobject_cast<KDevelop::MainWindow*>(mw));
-        soloViews.removeAll(dynamic_cast<IDocument*>(activeView->document()));
+        soloViews.removeAll(qobject_cast<IDocument*>(activeView->document()));
 
         if (!saveSomeDocuments(soloViews, IDocument::Default))
             // User cancelled or other error
@@ -949,7 +969,7 @@ IDocument* DocumentController::activeDocument() const
     UiController *uiController = Core::self()->uiControllerInternal();
     Sublime::MainWindow* mw = uiController->activeSublimeWindow();
     if( !mw || !mw->activeView() ) return nullptr;
-    return dynamic_cast<IDocument*>(mw->activeView()->document());
+    return qobject_cast<IDocument*>(mw->activeView()->document());
 }
 
 KTextEditor::View* DocumentController::activeTextDocumentView() const
@@ -1008,6 +1028,8 @@ QStringList DocumentController::activeDocumentPaths() const
 void DocumentController::registerDocumentForMimetype( const QString& mimetype,
                                         KDevelop::IDocumentFactory* factory )
 {
+    Q_D(DocumentController);
+
     if( !d->factories.contains( mimetype ) )
         d->factories[mimetype] = factory;
 }
@@ -1055,11 +1077,15 @@ QUrl DocumentController::nextEmptyDocumentUrl()
 
 IDocumentFactory* DocumentController::factory(const QString& mime) const
 {
+    Q_D(const DocumentController);
+
     return d->factories.value(mime);
 }
 
 KTextEditor::Document* DocumentController::globalTextEditorInstance()
 {
+    Q_D(DocumentController);
+
     if(!d->globalTextEditorInstance)
         d->globalTextEditorInstance = Core::self()->partControllerInternal()->createTextPart();
     return d->globalTextEditorInstance;

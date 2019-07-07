@@ -120,6 +120,8 @@ private:
 
 class TestFrameStackModel : public LldbFrameStackModel
 {
+    Q_OBJECT
+
 public:
 
     explicit TestFrameStackModel(DebugSession* session)
@@ -1828,7 +1830,8 @@ void LldbTest::testDebugInExternalTerminal()
 {
     TestLaunchConfiguration cfg;
 
-    foreach (const QString & console, QStringList() << "konsole" << "xterm" << "xfce4-terminal" << "gnome-terminal") {
+    const QStringList consoles { "konsole", "xterm", "xfce4-terminal", "gnome-terminal" };
+    for (const QString& console : consoles) {
 
         if (QStandardPaths::findExecutable(console).isEmpty()) {
             continue;
